@@ -19,14 +19,14 @@ const EVENT_CATEGORIES = [
   { id: 'leadership', label: 'Leadership & Skills', color: 'bg-orange-50 text-orange-700', maxPoints: 10 } 
 ];
 
-// Sự kiện ban đầu
+// Initial events
 const INITIAL_EVENTS = [
   { id: 1, title: 'Scientific Research Workshop', date: '2024-10-26', time: '08:00 AM', location: 'Hall A', points: 2, category: 'Academic & Research', status: 'Open', image: '🔬', description: 'Learn research methodology.', proposalFile: 'workshop_plan.pdf' },
   { id: 2, title: 'FTU Games 2025 Opening', date: '2024-10-28', time: '02:00 PM', location: 'Sports Center', points: 2, category: 'Culture, Arts & Sports', status: 'Full', image: '🏅', description: 'Sports festival opening ceremony.', proposalFile: 'games_budget.pdf' },
   { id: 3, title: 'Blood Donation Drive', date: '2024-11-02', time: '07:00 AM', location: 'Main Hall', points: 5, category: 'Volunteer & Community', status: 'Open', image: '🩸', description: 'Give blood, save lives.', proposalFile: 'redcross_collab.pdf' },
 ];
 
-// Điểm số ban đầu (Để demo tính năng update điểm)
+// START WITH EMPTY SCORES (0) AS REQUESTED
 const INITIAL_SCORES = {
   'Academic & Research': 0,
   'Political & Social': 0,
@@ -36,29 +36,15 @@ const INITIAL_SCORES = {
 };
 
 const MOCK_NOTIFICATIONS = [
-  { id: 1, text: 'Your "Blood Donation" evidence has been verified (+5 points).', time: '2 hours ago', type: 'success' },
-  { id: 2, text: 'New event "Startup Talk" is now open for registration.', time: '5 hours ago', type: 'info' },
+  { id: 1, text: 'Welcome to FTU-Engage! Start joining events to earn points.', time: 'Just now', type: 'info' },
 ];
 
-const INIT_EVIDENCE_HISTORY = [
-  // Empty initially to show live update
-];
-
-const MOCK_STUDENT_ATTENDANCE = [
-  { id: 1, name: 'Nguyen Van A', studentId: '2025001', class: 'K60-A', time: '08:15 AM', method: 'Code Entry' },
-  { id: 2, name: 'Tran Thi B', studentId: '2025002', class: 'K60-B', time: '08:20 AM', method: 'QR Scan' },
-];
+const INIT_EVIDENCE_HISTORY = [];
 
 const ANALYTICS_DATA = [
   { name: 'Jan', participation: 400 }, { name: 'Feb', participation: 300 }, { name: 'Mar', participation: 600 }, { name: 'Apr', participation: 800 }, { name: 'May', participation: 500 },
 ];
-
-const MOCK_CLUB_MEMBERS = [
-  { id: 1, name: 'Tran Van E', studentId: '2025005', role: 'President', status: 'Active', joined: 'Sep 2023' },
-  { id: 2, name: 'Le Thi F', studentId: '2025006', role: 'Treasurer', status: 'Active', joined: 'Sep 2023' },
-];
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28'];
 
 // --- HELPER COMPONENTS ---
 
@@ -117,8 +103,8 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
         <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
         <p className="text-gray-600 mb-6">{message}</p>
         <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={onClose}>No, Cancel</Button>
-          <Button onClick={onConfirm}>Yes, I'm Sure</Button>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={onConfirm}>Confirm</Button>
         </div>
       </div>
     </div>
@@ -278,6 +264,103 @@ const StudentDashboard = ({ scores }) => {
                 </div>
             </div>
         </Card>
+        <Card><h2 className="text-xl font-bold text-gray-800 mb-4">Latest Notifications</h2><div className="space-y-4">{MOCK_NOTIFICATIONS.map((n) => (<div key={n.id} className="flex gap-3 pb-3 border-b border-gray-50 last:border-0"><div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${n.type === 'success' ? 'bg-green-500' : 'bg-orange-500'}`} /><div><p className="text-sm text-gray-700">{n.text}</p><span className="text-xs text-gray-400">{n.time}</span></div></div>))}</div></Card>
+      </div>
+    </div>
+  );
+};
+
+// --- EVENTS PAGE (WITH AUTOMATIC CATEGORY FILTERING) ---
+const EventsPage = ({ events, onRegister }) => {
+  const [filterType, setFilterType] = useState('all'); 
+  const [selectedCategory, setSelectedCategory] = useState('All'); // State for category filter
+
+  // Apply both filters: Tab (All/Registered) AND Category
+  const filteredEvents = events.filter(event => {
+    // 1. Filter by Tab
+    if (filterType === 'registered' && !event.registered) return false;
+    if (filterType === 'saved' && !event.isFavorite) return false;
+    
+    // 2. Filter by Category
+    if (selectedCategory !== 'All' && event.category !== selectedCategory) return false;
+
+    // 3. Filter by Status (Only show Open/Full unless Registered tab)
+    if (filterType === 'all' && event.status === 'Pending Review') return false;
+
+    return true;
+  });
+
+  return (
+    <div className="flex flex-col lg:flex-row gap-6 h-full">
+      <div className="w-full lg:w-64 flex-shrink-0 space-y-4">
+        <Card>
+          <div className="flex items-center gap-2 font-bold mb-4 text-gray-800"><Filter size={18} /> Filters</div>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Category</label>
+              <div className="space-y-2">
+                 <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="category" 
+                      className="rounded text-[#B40000] focus:ring-[#B40000]" 
+                      checked={selectedCategory === 'All'} 
+                      onChange={() => setSelectedCategory('All')}
+                    /> 
+                    All Categories
+                 </label>
+                 {EVENT_CATEGORIES.map(c => (
+                   <label key={c.id} className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                     <input 
+                       type="radio" 
+                       name="category" 
+                       className="rounded text-[#B40000] focus:ring-[#B40000]" 
+                       checked={selectedCategory === c.label}
+                       onChange={() => setSelectedCategory(c.label)}
+                     /> 
+                     {c.label}
+                   </label>
+                 ))}
+              </div>
+            </div>
+            <Button variant="secondary" className="w-full text-sm" onClick={() => setSelectedCategory('All')}>Reset Filters</Button>
+          </div>
+        </Card>
+      </div>
+      
+      <div className="flex-1 flex flex-col gap-6">
+        <div className="flex justify-between items-center bg-white p-2 rounded-xl shadow-sm border border-gray-100">
+          <div className="flex gap-2">
+            {['All Events', 'My Registered', 'Saved'].map((tab) => (
+              <button key={tab} onClick={() => setFilterType(tab.toLowerCase())} className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${filterType === tab.toLowerCase() || (filterType === 'all' && tab === 'All Events') ? 'bg-[#B40000] text-white' : 'text-gray-600 hover:bg-gray-100'}`}>{tab}</button>
+            ))}
+          </div>
+          <div className="text-xs text-gray-500 mr-2">Showing {filteredEvents.length} results</div>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 overflow-y-auto pb-4">
+          {filteredEvents.length > 0 ? filteredEvents.map((event) => (
+            <Card key={event.id} className="flex flex-col h-full hover:shadow-md transition-shadow duration-200">
+              <div className="h-40 bg-gray-100 rounded-lg flex items-center justify-center text-5xl mb-4 relative overflow-hidden group">
+                <span className="group-hover:scale-110 transition-transform duration-300">{event.image}</span>
+                <div className="absolute top-2 right-2"><Badge status={event.status} /></div>
+              </div>
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400">{event.category}</span>
+                <span className="flex items-center gap-1 text-[#B40000] font-bold text-xs"><CheckCircle size={12} /> {event.points} pts</span>
+              </div>
+              <h3 className="font-bold text-gray-900 mb-2 line-clamp-1">{event.title}</h3>
+              <div className="space-y-2 mt-auto">
+                <div className="flex items-center gap-2 text-xs text-gray-600"><Calendar size={14} className="text-gray-400" /> {event.date}</div>
+                <Button className="w-full mt-3 text-sm" variant={event.status === 'Full' ? 'secondary' : 'primary'} disabled={event.registered || event.status === 'Full'} onClick={() => !event.registered && onRegister(event.id)}>
+                  {event.registered ? 'Registered' : event.status === 'Full' ? 'Join Waitlist' : 'Register Now'}
+                </Button>
+              </div>
+            </Card>
+          )) : (
+            <div className="col-span-3 text-center py-10 text-gray-400">No events found in this category.</div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -363,16 +446,6 @@ const EvidencePage = ({ onSubmitEvidence, evidenceHistory }) => {
   );
 };
 
-const EventsPage = ({ events, onRegister }) => {
-  const [filterType, setFilterType] = useState('all'); 
-  return (
-    <div className="flex flex-col lg:flex-row gap-6 h-full">
-      <div className="w-full lg:w-64 flex-shrink-0 space-y-4"><Card><div className="flex items-center gap-2 font-bold mb-4 text-gray-800"><Filter size={18} /> Filters</div><div className="space-y-4"><div><label className="text-sm font-medium text-gray-700 mb-2 block">Category</label><div className="space-y-2">{EVENT_CATEGORIES.map(c => (<label key={c.id} className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer"><input type="radio" name="category" className="rounded text-[#B40000] focus:ring-[#B40000]" /> {c.label}</label>))}</div></div><Button variant="secondary" className="w-full text-sm">Reset Filters</Button></div></Card></div>
-      <div className="flex-1 flex flex-col gap-6"><div className="flex justify-between items-center bg-white p-2 rounded-xl shadow-sm border border-gray-100"><div className="flex gap-2">{['All Events', 'My Registered', 'Saved'].map((tab) => (<button key={tab} onClick={() => setFilterType(tab.toLowerCase())} className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${filterType === tab.toLowerCase() || (filterType === 'all' && tab === 'All Events') ? 'bg-[#B40000] text-white' : 'text-gray-600 hover:bg-gray-100'}`}>{tab}</button>))}</div></div><div className="grid md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 overflow-y-auto pb-4">{events.filter(e => e.status === 'Open' || e.status === 'Full').map((event) => (<Card key={event.id} className="flex flex-col h-full hover:shadow-md transition-shadow duration-200"><div className="h-40 bg-gray-100 rounded-lg flex items-center justify-center text-5xl mb-4 relative overflow-hidden group"><span className="group-hover:scale-110 transition-transform duration-300">{event.image}</span><div className="absolute top-2 right-2"><Badge status={event.status} /></div></div><div className="flex justify-between items-start mb-2"><span className="text-[10px] uppercase font-bold tracking-wider text-gray-400">{event.category}</span><span className="flex items-center gap-1 text-[#B40000] font-bold text-xs"><CheckCircle size={12} /> {event.points} pts</span></div><h3 className="font-bold text-gray-900 mb-2 line-clamp-1">{event.title}</h3><div className="space-y-2 mt-auto"><div className="flex items-center gap-2 text-xs text-gray-600"><Calendar size={14} className="text-gray-400" /> {event.date}</div><Button className="w-full mt-3 text-sm" variant={event.status === 'Full' ? 'secondary' : 'primary'} disabled={event.registered || event.status === 'Full'} onClick={() => !event.registered && onRegister(event.id)}>{event.registered ? 'Registered' : event.status === 'Full' ? 'Join Waitlist' : 'Register Now'}</Button></div></Card>))}</div></div>
-    </div>
-  );
-};
-
 const CheckInPage = () => {
   const [code, setCode] = useState('');
   const [status, setStatus] = useState('idle');
@@ -381,7 +454,7 @@ const CheckInPage = () => {
 };
 
 const ProfilePage = () => {
-  const [isEditing, setIsEditing] = useState(true); // Start in edit mode
+  const [isEditing, setIsEditing] = useState(true); 
   const [formData, setFormData] = useState({ name: '', id: '', dob: '', phone: '', email: '', address: '', class: '', major: '' });
   const handleInputChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
   const InfoRow = ({ label, name, value }) => (<div className="grid grid-cols-3 items-center"><span className="font-medium text-gray-500">{label}:</span><div className="col-span-2 font-bold text-gray-800">{isEditing ? <input type="text" name={name} value={value} onChange={handleInputChange} className="w-full border rounded-lg p-2 text-sm" /> : value || '-'}</div></div>);
@@ -402,8 +475,8 @@ const ProfilePage = () => {
   );
 };
 
-// --- ORGANIZER PORTAL ---
-const OrganizerPortal = ({ onAddEvent }) => {
+// --- ORGANIZER PORTAL (SIMPLIFIED & UPDATED STATUS) ---
+const OrganizerPortal = ({ onAddEvent, events }) => {
   const [formData, setFormData] = useState({ title: '', date: '', points: 2, category: '' });
   const [file, setFile] = useState(null);
   const fileRef = useRef(null);
@@ -415,6 +488,9 @@ const OrganizerPortal = ({ onAddEvent }) => {
     setFile(null);
     alert("Event submitted for Admin verification!");
   };
+
+  // Filter to show only events created by Organizer (mocked by showing all)
+  const myEvents = events; 
 
   return (
     <div className="grid lg:grid-cols-2 gap-6">
@@ -440,17 +516,32 @@ const OrganizerPortal = ({ onAddEvent }) => {
           <Button className="w-full mt-4" onClick={handleSubmit}>Submit for Verification</Button>
         </div>
       </Card>
-      <Card><div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg">Attendance Queue</h3><Button variant="ghost" size="sm"><Download size={14}/></Button></div><div className="overflow-x-auto"><table className="w-full text-xs text-left"><thead className="bg-gray-50"><tr><th className="p-2">Student</th><th className="p-2 text-right">Check-in</th></tr></thead><tbody>{MOCK_STUDENT_ATTENDANCE.map(st => (<tr key={st.id}><td className="p-2"><div className="font-bold">{st.name}</div><div className="text-[10px] text-gray-500">{st.studentId}</div></td><td className="p-2 text-right"><div className="text-green-600">{st.time}</div><div className="text-[10px] text-gray-400">{st.method}</div></td></tr>))}</tbody></table></div></Card>
+      
+      <Card>
+        <h3 className="font-bold text-lg mb-4">My Submitted Events</h3>
+        <div className="space-y-3 overflow-y-auto max-h-[400px]">
+           {myEvents.map(event => (
+             <div key={event.id} className="border p-3 rounded-lg flex justify-between items-center">
+               <div>
+                 <div className="font-bold text-sm">{event.title}</div>
+                 <div className="text-xs text-gray-500">{event.category}</div>
+               </div>
+               <div className="text-right">
+                 <Badge status={event.status === 'Open' ? 'Verified' : 'Pending Review'} />
+                 {event.status === 'Open' && <div className="text-[10px] text-green-600 mt-1">Live</div>}
+               </div>
+             </div>
+           ))}
+        </div>
+      </Card>
     </div>
   );
 };
 
-const MemberManagement = () => (<div className="space-y-6"><Card><div className="flex justify-between items-center mb-6"><div><h2 className="font-bold text-lg text-[#B40000]">Club Member Registry</h2></div><Button variant="secondary" className="text-xs">Import List</Button></div><div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-gray-50 text-gray-600 font-medium"><tr><th className="p-3">Student Info</th><th className="p-3">Role</th><th className="p-3">Status</th></tr></thead><tbody>{MOCK_CLUB_MEMBERS.map((member) => (<tr key={member.id}><td className="p-3"><div className="font-bold">{member.name}</div></td><td className="p-3">{member.role}</td><td className="p-3"><Badge status={member.status} /></td></tr>))}</tbody></table></div></Card></div>);
-
 // --- ADMIN PORTAL (UPDATED: Student Evidence Review) ---
 const AdminApprovals = ({ events, evidenceHistory, onVerifyEvent, onVerifyEvidence, onRequestChange }) => (
   <div className="space-y-6">
-    <h2 className="text-2xl font-bold text-gray-800">Event & Score Approvals</h2>
+    <h2 className="text-2xl font-bold text-gray-800">Approvals & Verification</h2>
     
     {/* 1. Event Proposals */}
     <Card className="border-l-4 border-blue-500">
@@ -501,12 +592,9 @@ const AdminApprovals = ({ events, evidenceHistory, onVerifyEvent, onVerifyEviden
 const AdminSystemOversight = () => (
   <div className="space-y-6">
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">{['Total Users', 'Pending Disputes', 'Avg Score', 'Active Events'].map((label, i) => (<Card key={i} className="p-4"><div className="text-gray-500 text-xs font-bold uppercase">{label}</div><div className="text-2xl font-bold text-[#B40000]">{[1240, 12, '89%', 45][i]}</div></Card>))}</div>
-    <div className="grid lg:grid-cols-2 gap-6"><Card><h3 className="font-bold mb-4">Participation</h3><NativeBarChart /></Card><Card><h3 className="font-bold mb-4">Breakdown</h3><NativeDonutChart /></Card></div>
+    <div className="grid lg:grid-cols-2 gap-6"><Card><h3 className="font-bold mb-4">Participation</h3><NativeBarChart /></Card><Card><h3 className="font-bold mb-4">Breakdown</h3><NativeDonutChart totalScore={84} /></Card></div>
   </div>
 );
-
-const AdminDisputes = () => (<div className="space-y-6"><Card><h2 className="font-bold text-lg text-gray-800 mb-6">Dispute Management Queue</h2><div className="text-center text-gray-500 py-10">No active disputes.</div></Card></div>);
-const AdminPolicies = () => (<div className="space-y-6"><Card><h2 className="font-bold text-lg text-gray-800 mb-6">Score Policies</h2><div className="text-center text-gray-500 py-10">Policy configuration panel.</div></Card></div>);
 
 // --- MAIN APP ---
 
@@ -522,15 +610,10 @@ const Sidebar = ({ role, activeTab, setActiveTab, onLogout }) => {
     ],
     organizer: [
       { id: 'org-events', label: 'Event Management', icon: Calendar },
-      { id: 'attendance', label: 'Attendance', icon: Users },
-      { id: 'members', label: 'Club Members', icon: UserPlus }, 
-      { id: 'score-submit', label: 'Score Submission', icon: CheckSquare },
     ],
     admin: [
       { id: 'oversight', label: 'System Oversight', icon: BarChart2 },
       { id: 'approvals', label: 'Approvals', icon: CheckSquare }, 
-      { id: 'disputes', label: 'Dispute Management', icon: AlertCircle },
-      { id: 'policies', label: 'Score Policies', icon: Settings },
     ]
   };
 
@@ -614,7 +697,6 @@ const App = () => {
   const confirmRegister = () => {
     setEvents(events.map(e => e.id === confirmModal.eventId ? { ...e, registered: true } : e));
     setConfirmModal({ isOpen: false, eventId: null });
-    // Auto add points for internal events (simulated)
     const event = events.find(e => e.id === confirmModal.eventId);
     if(event) {
        setStudentScores(prev => ({ ...prev, [event.category]: prev[event.category] + event.points }));
@@ -630,12 +712,9 @@ const App = () => {
       case 'evidence': return <EvidencePage onSubmitEvidence={handleSubmitEvidence} evidenceHistory={evidenceHistory} />;
       case 'events': return <EventsPage events={events} onRegister={initiateRegister} />; 
       case 'qr-checkin': return <CheckInPage />;
-      case 'org-events': return <OrganizerPortal onAddEvent={handleAddEvent} />;
-      case 'members': return <MemberManagement />; 
+      case 'org-events': return <OrganizerPortal onAddEvent={handleAddEvent} events={events} />;
       case 'oversight': return <AdminSystemOversight />;
       case 'approvals': return <AdminApprovals events={events} evidenceHistory={evidenceHistory} onVerifyEvent={handleVerifyEvent} onVerifyEvidence={handleVerifyEvidence} onRequestChange={(id) => setFeedbackModal({isOpen: true, eventId: id})} />;
-      case 'disputes': return <AdminDisputes />;
-      case 'policies': return <AdminPolicies />;
       case 'profile': return <ProfilePage />;
       default: return <div className="p-10 text-center text-gray-500">Page under construction</div>;
     }
