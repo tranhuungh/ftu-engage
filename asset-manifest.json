@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/ftu-engage/static/css/main.c87b2aad.css",
+    "main.js": "/ftu-engage/static/js/main.5ca01f08.js",
+    "static/js/453.852eb89d.chunk.js": "/ftu-engage/static/js/453.852eb89d.chunk.js",
+    "index.html": "/ftu-engage/index.html",
+    "main.c87b2aad.css.map": "/ftu-engage/static/css/main.c87b2aad.css.map",
+    "main.5ca01f08.js.map": "/ftu-engage/static/js/main.5ca01f08.js.map",
+    "453.852eb89d.chunk.js.map": "/ftu-engage/static/js/453.852eb89d.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.c87b2aad.css",
+    "static/js/main.5ca01f08.js"
+  ]
+}
