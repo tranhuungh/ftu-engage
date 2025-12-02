@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { 
   Home, Calendar, FileText, Bell, User, 
   Search, Menu, Filter, Download, 
@@ -9,7 +9,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell 
 } from 'recharts';
 
-// --- DỮ LIỆU KHỞI TẠO ---
+// --- INITIAL DATA & CONSTANTS ---
 
 const EVENT_CATEGORIES = [
   { id: 'academic', label: 'Academic & Research', color: 'bg-blue-50 text-blue-700', maxPoints: 20 }, 
@@ -19,14 +19,19 @@ const EVENT_CATEGORIES = [
   { id: 'leadership', label: 'Leadership & Skills', color: 'bg-orange-50 text-orange-700', maxPoints: 10 } 
 ];
 
-// Initial events
+// Initial events - UPDATED WITH REAL EXAMPLES FROM IMAGES & USER REQUEST
 const INITIAL_EVENTS = [
-  { id: 1, title: 'Scientific Research Workshop', date: '2024-10-26', time: '08:00 AM', location: 'Hall A', points: 2, category: 'Academic & Research', status: 'Open', image: '🔬', description: 'Learn research methodology.', proposalFile: 'workshop_plan.pdf' },
-  { id: 2, title: 'FTU Games 2025 Opening', date: '2024-10-28', time: '02:00 PM', location: 'Sports Center', points: 2, category: 'Culture, Arts & Sports', status: 'Full', image: '🏅', description: 'Sports festival opening ceremony.', proposalFile: 'games_budget.pdf' },
-  { id: 3, title: 'Blood Donation Drive', date: '2024-11-02', time: '07:00 AM', location: 'Main Hall', points: 5, category: 'Volunteer & Community', status: 'Open', image: '🩸', description: 'Give blood, save lives.', proposalFile: 'redcross_collab.pdf' },
+  { id: 1, title: 'Scientific Research Workshop', date: '2024-10-26', time: '08:00 AM', location: 'Hall A', points: 2, category: 'Academic & Research', status: 'Open', image: '🔬', description: 'Learn research methodology and paper writing.', proposalFile: 'workshop_plan.pdf', registered: false },
+  { id: 2, title: 'FTU Games 2025 Opening', date: '2024-10-28', time: '02:00 PM', location: 'Sports Center', points: 2, category: 'Culture, Arts & Sports', status: 'Full', image: '🏅', description: 'The biggest sports festival of the year. Cheering teams welcome!', proposalFile: 'games_budget.pdf', registered: false },
+  { id: 3, title: 'Blood Donation Drive', date: '2024-11-02', time: '07:00 AM', location: 'Main Hall', points: 5, category: 'Volunteer & Community', status: 'Open', image: '🩸', description: 'Give blood, save lives. Organized by the Red Cross unit.', proposalFile: 'redcross_collab.pdf', registered: false },
+  
+  // NEW EVENTS ADDED BASED ON YOUR REQUEST
+  { id: 4, title: 'VSIC 2025: Social Innovation Challenge', date: '2025-12-01', time: '05:00 PM', location: 'Hall B001', points: 5, category: 'Academic & Research', status: 'Open', image: '💡', description: 'Vietnam Social Innovation Challenge 2025. Join the finals to witness creative business models.', proposalFile: 'vsic_plan.pdf', registered: false },
+  { id: 5, title: 'FBT 2025: Badminton Tournament', date: '2025-11-15', time: '08:00 AM', location: 'Sports Hall', points: 2, category: 'Culture, Arts & Sports', status: 'Open', image: '🏸', description: 'Badminton Championship CSII. Networking with alumni and lecturers.', proposalFile: 'badminton_plan.pdf', registered: false },
+  { id: 6, title: 'Ambassador 2026 Recruitment', date: '2025-12-05', time: '11:59 PM', location: 'Online', points: 5, category: 'Leadership & Skills', status: 'Open', image: '🌟', description: 'Become the face of FTU admissions 2026. Communication & Leadership role.', proposalFile: 'ambassador_program.pdf', registered: false },
+  { id: 7, title: '1:1 Career Consulting (PEC)', date: '2025-12-03', time: '09:00 AM', location: 'F-Hub, Hanoi', points: 2, category: 'Academic & Research', status: 'Open', image: '💼', description: 'Personalized career guidance with experts. Understand labor market trends.', proposalFile: 'career_consult.pdf', registered: false },
 ];
 
-// START WITH EMPTY SCORES (0) AS REQUESTED
 const INITIAL_SCORES = {
   'Academic & Research': 0,
   'Political & Social': 0,
@@ -41,10 +46,16 @@ const MOCK_NOTIFICATIONS = [
 
 const INIT_EVIDENCE_HISTORY = [];
 
-const ANALYTICS_DATA = [
-  { name: 'Jan', participation: 400 }, { name: 'Feb', participation: 300 }, { name: 'Mar', participation: 600 }, { name: 'Apr', participation: 800 }, { name: 'May', participation: 500 },
+// Initial Analytics Data (Zeroed out as requested)
+const INITIAL_ANALYTICS_DATA = [
+  { name: 'Jan', participation: 0 }, 
+  { name: 'Feb', participation: 0 }, 
+  { name: 'Mar', participation: 0 }, 
+  { name: 'Apr', participation: 0 }, 
+  { name: 'May', participation: 0 },
 ];
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28'];
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 // --- HELPER COMPONENTS ---
 
@@ -145,16 +156,42 @@ const NativeDonutChart = ({ totalScore }) => (
   </div>
 );
 
-const NativeBarChart = () => (
+const NativeBarChart = ({ data }) => (
   <div className="w-full h-64 flex items-end justify-between gap-2 pt-8">
-    {[{ l: 'Jan', v: 40 }, { l: 'Feb', v: 30 }, { l: 'Mar', v: 60 }, { l: 'Apr', v: 80 }, { l: 'May', v: 50 }].map((item, i) => (
+    {data.slice(0, 5).map((item, i) => (
       <div key={i} className="flex-1 flex flex-col items-center gap-2 group cursor-pointer">
         <div className="w-full bg-gray-100 rounded-t-md relative h-48 flex items-end overflow-hidden">
-          <div className="w-full bg-[#B40000] rounded-t-md transition-all duration-500 group-hover:bg-red-700" style={{ height: `${item.v}%` }}></div>
+          {/* Height relative to 100 (max participation) */}
+          <div className="w-full bg-[#B40000] rounded-t-md transition-all duration-500 group-hover:bg-red-700" style={{ height: `${Math.min(item.participation, 100)}%` }}></div>
         </div>
-        <span className="text-xs text-gray-500 font-medium">{item.l}</span>
+        <span className="text-xs text-gray-500 font-medium">{item.name}</span>
       </div>
     ))}
+  </div>
+);
+
+const CustomPieChart = ({ data }) => (
+  <div className="w-full h-64 flex items-center justify-center">
+    <ResponsiveContainer width="100%" height="100%">
+      <PieChart>
+        <Pie
+          data={data}
+          cx="50%"
+          cy="50%"
+          innerRadius={60}
+          outerRadius={80}
+          fill="#8884d8"
+          paddingAngle={5}
+          dataKey="value"
+        >
+          {data.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+          ))}
+        </Pie>
+        <RechartsTooltip />
+        <Legend />
+      </PieChart>
+    </ResponsiveContainer>
   </div>
 );
 
@@ -180,9 +217,6 @@ const LoginPage = ({ onLogin }) => {
     <div className="min-h-screen bg-[#F8F8F8] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
         <div className="bg-[#B40000] p-8 text-center text-white">
-          <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden border-4 border-white/20">
-             <img src="/FTU_logo_2020.svg.jpg" alt="Logo" className="w-full h-full object-cover" onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/80x80/B40000/FFFFFF?text=F"; }} />
-          </div>
           <h1 className="text-2xl font-bold" style={{ fontFamily: "'Montserrat', sans-serif" }}>FTU-Engage</h1>
           <p className="opacity-90 text-sm mt-1">Student Activity Management System</p>
         </div>
@@ -200,17 +234,11 @@ const LoginPage = ({ onLogin }) => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">ID (Number Only)</label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <input type="number" required value={studentId} onChange={(e) => setStudentId(e.target.value)} className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#B40000]" placeholder="e.g. 2025001" />
-              </div>
+              <input type="number" required value={studentId} onChange={(e) => setStudentId(e.target.value)} className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#B40000]" placeholder="e.g. 2025001" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <div className="relative">
-                <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#B40000]" placeholder="••••••••" />
-              </div>
+              <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#B40000]" placeholder="••••••••" />
             </div>
             <Button type="submit" className="w-full py-3 text-lg mt-4">Login <ArrowRight size={18} /></Button>
           </form>
@@ -270,98 +298,22 @@ const StudentDashboard = ({ scores }) => {
   );
 };
 
-// --- EVENTS PAGE (WITH AUTOMATIC CATEGORY FILTERING) ---
 const EventsPage = ({ events, onRegister }) => {
   const [filterType, setFilterType] = useState('all'); 
-  const [selectedCategory, setSelectedCategory] = useState('All'); // State for category filter
+  const [selectedCategory, setSelectedCategory] = useState('All');
 
-  // Apply both filters: Tab (All/Registered) AND Category
   const filteredEvents = events.filter(event => {
-    // 1. Filter by Tab
     if (filterType === 'registered' && !event.registered) return false;
     if (filterType === 'saved' && !event.isFavorite) return false;
-    
-    // 2. Filter by Category
     if (selectedCategory !== 'All' && event.category !== selectedCategory) return false;
-
-    // 3. Filter by Status (Only show Open/Full unless Registered tab)
     if (filterType === 'all' && event.status === 'Pending Review') return false;
-
     return true;
   });
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-full">
-      <div className="w-full lg:w-64 flex-shrink-0 space-y-4">
-        <Card>
-          <div className="flex items-center gap-2 font-bold mb-4 text-gray-800"><Filter size={18} /> Filters</div>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Category</label>
-              <div className="space-y-2">
-                 <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="category" 
-                      className="rounded text-[#B40000] focus:ring-[#B40000]" 
-                      checked={selectedCategory === 'All'} 
-                      onChange={() => setSelectedCategory('All')}
-                    /> 
-                    All Categories
-                 </label>
-                 {EVENT_CATEGORIES.map(c => (
-                   <label key={c.id} className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                     <input 
-                       type="radio" 
-                       name="category" 
-                       className="rounded text-[#B40000] focus:ring-[#B40000]" 
-                       checked={selectedCategory === c.label}
-                       onChange={() => setSelectedCategory(c.label)}
-                     /> 
-                     {c.label}
-                   </label>
-                 ))}
-              </div>
-            </div>
-            <Button variant="secondary" className="w-full text-sm" onClick={() => setSelectedCategory('All')}>Reset Filters</Button>
-          </div>
-        </Card>
-      </div>
-      
-      <div className="flex-1 flex flex-col gap-6">
-        <div className="flex justify-between items-center bg-white p-2 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex gap-2">
-            {['All Events', 'My Registered', 'Saved'].map((tab) => (
-              <button key={tab} onClick={() => setFilterType(tab.toLowerCase())} className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${filterType === tab.toLowerCase() || (filterType === 'all' && tab === 'All Events') ? 'bg-[#B40000] text-white' : 'text-gray-600 hover:bg-gray-100'}`}>{tab}</button>
-            ))}
-          </div>
-          <div className="text-xs text-gray-500 mr-2">Showing {filteredEvents.length} results</div>
-        </div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 overflow-y-auto pb-4">
-          {filteredEvents.length > 0 ? filteredEvents.map((event) => (
-            <Card key={event.id} className="flex flex-col h-full hover:shadow-md transition-shadow duration-200">
-              <div className="h-40 bg-gray-100 rounded-lg flex items-center justify-center text-5xl mb-4 relative overflow-hidden group">
-                <span className="group-hover:scale-110 transition-transform duration-300">{event.image}</span>
-                <div className="absolute top-2 right-2"><Badge status={event.status} /></div>
-              </div>
-              <div className="flex justify-between items-start mb-2">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400">{event.category}</span>
-                <span className="flex items-center gap-1 text-[#B40000] font-bold text-xs"><CheckCircle size={12} /> {event.points} pts</span>
-              </div>
-              <h3 className="font-bold text-gray-900 mb-2 line-clamp-1">{event.title}</h3>
-              <div className="space-y-2 mt-auto">
-                <div className="flex items-center gap-2 text-xs text-gray-600"><Calendar size={14} className="text-gray-400" /> {event.date}</div>
-                <Button className="w-full mt-3 text-sm" variant={event.status === 'Full' ? 'secondary' : 'primary'} disabled={event.registered || event.status === 'Full'} onClick={() => !event.registered && onRegister(event.id)}>
-                  {event.registered ? 'Registered' : event.status === 'Full' ? 'Join Waitlist' : 'Register Now'}
-                </Button>
-              </div>
-            </Card>
-          )) : (
-            <div className="col-span-3 text-center py-10 text-gray-400">No events found in this category.</div>
-          )}
-        </div>
-      </div>
+      <div className="w-full lg:w-64 flex-shrink-0 space-y-4"><Card><div className="flex items-center gap-2 font-bold mb-4 text-gray-800"><Filter size={18} /> Filters</div><div className="space-y-4"><div><label className="text-sm font-medium text-gray-700 mb-2 block">Category</label><div className="space-y-2"><label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer"><input type="radio" name="category" className="rounded text-[#B40000] focus:ring-[#B40000]" checked={selectedCategory === 'All'} onChange={() => setSelectedCategory('All')}/> All Categories</label>{EVENT_CATEGORIES.map(c => (<label key={c.id} className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer"><input type="radio" name="category" className="rounded text-[#B40000] focus:ring-[#B40000]" checked={selectedCategory === c.label} onChange={() => setSelectedCategory(c.label)}/> {c.label}</label>))}</div></div><Button variant="secondary" className="w-full text-sm" onClick={() => setSelectedCategory('All')}>Reset Filters</Button></div></Card></div>
+      <div className="flex-1 flex flex-col gap-6"><div className="flex justify-between items-center bg-white p-2 rounded-xl shadow-sm border border-gray-100"><div className="flex gap-2">{['All Events', 'My Registered', 'Saved'].map((tab) => (<button key={tab} onClick={() => setFilterType(tab.toLowerCase())} className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${filterType === tab.toLowerCase() || (filterType === 'all' && tab === 'All Events') ? 'bg-[#B40000] text-white' : 'text-gray-600 hover:bg-gray-100'}`}>{tab}</button>))}</div></div><div className="grid md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 overflow-y-auto pb-4">{filteredEvents.length > 0 ? filteredEvents.map((event) => (<Card key={event.id} className="flex flex-col h-full hover:shadow-md transition-shadow duration-200"><div className="h-40 bg-gray-100 rounded-lg flex items-center justify-center text-5xl mb-4 relative overflow-hidden group"><span className="group-hover:scale-110 transition-transform duration-300">{event.image}</span><div className="absolute top-2 right-2"><Badge status={event.status} /></div></div><div className="flex justify-between items-start mb-2"><span className="text-[10px] uppercase font-bold tracking-wider text-gray-400">{event.category}</span><span className="flex items-center gap-1 text-[#B40000] font-bold text-xs"><CheckCircle size={12} /> {event.points} pts</span></div><h3 className="font-bold text-gray-900 mb-2 line-clamp-1">{event.title}</h3><div className="space-y-2 mt-auto"><div className="flex items-center gap-2 text-xs text-gray-600"><Calendar size={14} className="text-gray-400" /> {event.date}</div><Button className="w-full mt-3 text-sm" variant={event.status === 'Full' ? 'secondary' : 'primary'} disabled={event.registered || event.status === 'Full'} onClick={() => !event.registered && onRegister(event.id)}>{event.registered ? 'Registered' : event.status === 'Full' ? 'Join Waitlist' : 'Register Now'}</Button></div></Card>)) : <div className="col-span-3 text-center py-10 text-gray-400">No events found.</div>}</div></div>
     </div>
   );
 };
@@ -439,7 +391,7 @@ const EvidencePage = ({ onSubmitEvidence, evidenceHistory }) => {
         
         <Card className="lg:col-span-2">
           <h3 className="font-bold text-lg mb-4">Submission History</h3>
-          <div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-gray-50"><tr><th className="p-3">Activity</th><th className="p-3">Category</th><th className="p-3">Date</th><th className="p-3">File</th><th className="p-3">Status</th></tr></thead><tbody>{evidenceHistory.map(item => (<tr key={item.id}><td className="p-3 font-medium">{item.activity}</td><td className="p-3 text-xs">{item.category || '-'}</td><td className="p-3">{item.date}</td><td className="p-3 text-blue-600 text-xs underline cursor-pointer">{item.file}</td><td className="p-3"><Badge status={item.status} /></td></tr>))}</tbody></table></div>
+          <div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-gray-50"><tr><th className="p-3">Activity</th><th className="p-3">Category</th><th className="p-3">Date</th><th className="p-3">File</th><th className="p-3">Status</th></tr></thead><tbody>{evidenceHistory.length > 0 ? evidenceHistory.map(item => (<tr key={item.id}><td className="p-3 font-medium">{item.activity}</td><td className="p-3 text-xs">{item.category || '-'}</td><td className="p-3">{item.date}</td><td className="p-3 text-blue-600 text-xs underline cursor-pointer">{item.file}</td><td className="p-3"><Badge status={item.status} /></td></tr>)) : <tr><td colSpan="5" className="text-center p-4 text-gray-500">No history yet.</td></tr>}</tbody></table></div>
         </Card>
       </div>
     </div>
@@ -475,7 +427,7 @@ const ProfilePage = () => {
   );
 };
 
-// --- ORGANIZER PORTAL (SIMPLIFIED & UPDATED STATUS) ---
+// --- ORGANIZER PORTAL ---
 const OrganizerPortal = ({ onAddEvent, events }) => {
   const [formData, setFormData] = useState({ title: '', date: '', points: 2, category: '' });
   const [file, setFile] = useState(null);
@@ -489,7 +441,7 @@ const OrganizerPortal = ({ onAddEvent, events }) => {
     alert("Event submitted for Admin verification!");
   };
 
-  // Filter to show only events created by Organizer (mocked by showing all)
+  // Only show events created by "me" (mocked as all events for now)
   const myEvents = events; 
 
   return (
@@ -522,14 +474,8 @@ const OrganizerPortal = ({ onAddEvent, events }) => {
         <div className="space-y-3 overflow-y-auto max-h-[400px]">
            {myEvents.map(event => (
              <div key={event.id} className="border p-3 rounded-lg flex justify-between items-center">
-               <div>
-                 <div className="font-bold text-sm">{event.title}</div>
-                 <div className="text-xs text-gray-500">{event.category}</div>
-               </div>
-               <div className="text-right">
-                 <Badge status={event.status === 'Open' ? 'Verified' : 'Pending Review'} />
-                 {event.status === 'Open' && <div className="text-[10px] text-green-600 mt-1">Live</div>}
-               </div>
+               <div><div className="font-bold text-sm">{event.title}</div><div className="text-xs text-gray-500">{event.category}</div></div>
+               <div className="text-right"><Badge status={event.status === 'Open' ? 'Verified' : 'Pending Review'} />{event.status === 'Open' && <div className="text-[10px] text-green-600 mt-1">Live</div>}</div>
              </div>
            ))}
         </div>
@@ -538,10 +484,10 @@ const OrganizerPortal = ({ onAddEvent, events }) => {
   );
 };
 
-// --- ADMIN PORTAL (UPDATED: Student Evidence Review) ---
+// --- ADMIN PORTAL ---
 const AdminApprovals = ({ events, evidenceHistory, onVerifyEvent, onVerifyEvidence, onRequestChange }) => (
   <div className="space-y-6">
-    <h2 className="text-2xl font-bold text-gray-800">Approvals & Verification</h2>
+    <h2 className="text-2xl font-bold text-gray-800">Event & Score Approvals</h2>
     
     {/* 1. Event Proposals */}
     <Card className="border-l-4 border-blue-500">
@@ -552,7 +498,7 @@ const AdminApprovals = ({ events, evidenceHistory, onVerifyEvent, onVerifyEviden
         events.filter(e => e.status === 'Pending Review').map(event => (
           <div key={event.id} className="border p-4 rounded-lg mb-4">
             <div className="flex justify-between items-start mb-2">
-              <div><h4 className="font-bold">{event.title}</h4><p className="text-xs text-gray-500">Category: {event.category}</p></div>
+              <div><h4 className="font-bold">{event.title}</h4><p className="text-xs text-gray-500">Proposed by Organizer • {event.category}</p></div>
               <Badge status="Pending Review" />
             </div>
             <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 p-2 rounded mb-3 cursor-pointer border border-blue-200 hover:bg-blue-100">
@@ -589,12 +535,38 @@ const AdminApprovals = ({ events, evidenceHistory, onVerifyEvent, onVerifyEviden
   </div>
 );
 
-const AdminSystemOversight = () => (
-  <div className="space-y-6">
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">{['Total Users', 'Pending Disputes', 'Avg Score', 'Active Events'].map((label, i) => (<Card key={i} className="p-4"><div className="text-gray-500 text-xs font-bold uppercase">{label}</div><div className="text-2xl font-bold text-[#B40000]">{[1240, 12, '89%', 45][i]}</div></Card>))}</div>
-    <div className="grid lg:grid-cols-2 gap-6"><Card><h3 className="font-bold mb-4">Participation</h3><NativeBarChart /></Card><Card><h3 className="font-bold mb-4">Breakdown</h3><NativeDonutChart totalScore={84} /></Card></div>
-  </div>
-);
+const AdminSystemOversight = ({ analyticsData, evidenceHistory, events }) => {
+    const pendingCount = evidenceHistory.filter(e => e.status === 'Pending').length + events.filter(e => e.status === 'Pending Review').length;
+    const activeEvents = events.filter(e => e.status === 'Open').length;
+    const totalUsers = 1245; // Mocked total users
+
+    // Dynamic Analytics: Only show if data exists > 0
+    const chartData = analyticsData.some(d => d.participation > 0) ? analyticsData : INITIAL_ANALYTICS_DATA;
+    
+    // Dynamic Pie Data based on Active Events
+    const pieData = [
+        { name: 'Academic', value: events.filter(e => e.status === 'Open' && e.category === 'Academic & Research').length },
+        { name: 'Political', value: events.filter(e => e.status === 'Open' && e.category === 'Political & Social').length },
+        { name: 'Culture', value: events.filter(e => e.status === 'Open' && e.category === 'Culture, Arts & Sports').length },
+        { name: 'Volunteer', value: events.filter(e => e.status === 'Open' && e.category === 'Volunteer & Community').length },
+    ].filter(d => d.value > 0); 
+
+    return (
+    <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="p-4"><div className="text-gray-500 text-xs font-bold uppercase">Total Users</div><div className="text-2xl font-bold text-[#B40000]">{totalUsers}</div></Card>
+            <Card className="p-4"><div className="text-gray-500 text-xs font-bold uppercase">Pending Disputes</div><div className="text-2xl font-bold text-[#B40000]">{pendingCount}</div></Card>
+            <Card className="p-4"><div className="text-gray-500 text-xs font-bold uppercase">Active Events</div><div className="text-2xl font-bold text-[#B40000]">{activeEvents}</div></Card>
+        </div>
+        <div className="grid lg:grid-cols-2 gap-6">
+            <Card><h3 className="font-bold mb-4">Participation (Monthly)</h3><NativeBarChart data={chartData} /></Card>
+            <Card><h3 className="font-bold mb-4">Event Breakdown</h3>
+               {pieData.length > 0 ? <CustomPieChart data={pieData} /> : <div className="text-center text-gray-400 py-10">No active event data yet</div>}
+            </Card>
+        </div>
+    </div>
+    );
+};
 
 // --- MAIN APP ---
 
@@ -650,6 +622,7 @@ const App = () => {
   const [events, setEvents] = useState(INITIAL_EVENTS);
   const [evidenceHistory, setEvidenceHistory] = useState(INIT_EVIDENCE_HISTORY);
   const [studentScores, setStudentScores] = useState(INITIAL_SCORES);
+  const [analyticsData, setAnalyticsData] = useState(INITIAL_ANALYTICS_DATA); 
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, eventId: null });
   const [feedbackModal, setFeedbackModal] = useState({ isOpen: false, eventId: null });
 
@@ -681,9 +654,16 @@ const App = () => {
 
   const handleVerifyEvidence = (id, category) => {
     setEvidenceHistory(evidenceHistory.map(e => e.id === id ? { ...e, status: 'Verified' } : e));
+    
+    // LIVE SCORE UPDATE
     if (category && studentScores[category] !== undefined) {
         setStudentScores(prev => ({ ...prev, [category]: prev[category] + 5 }));
     }
+
+    // LIVE ANALYTICS UPDATE
+    const currentMonth = "Oct"; // Simulated month
+    setAnalyticsData(prev => prev.map(m => m.name === currentMonth ? { ...m, participation: m.participation + 1 } : m));
+    
     alert("Evidence Verified! 5 points added to student score.");
   };
 
@@ -697,6 +677,7 @@ const App = () => {
   const confirmRegister = () => {
     setEvents(events.map(e => e.id === confirmModal.eventId ? { ...e, registered: true } : e));
     setConfirmModal({ isOpen: false, eventId: null });
+    // Auto add points for internal events (simulated)
     const event = events.find(e => e.id === confirmModal.eventId);
     if(event) {
        setStudentScores(prev => ({ ...prev, [event.category]: prev[event.category] + event.points }));
@@ -713,7 +694,7 @@ const App = () => {
       case 'events': return <EventsPage events={events} onRegister={initiateRegister} />; 
       case 'qr-checkin': return <CheckInPage />;
       case 'org-events': return <OrganizerPortal onAddEvent={handleAddEvent} events={events} />;
-      case 'oversight': return <AdminSystemOversight />;
+      case 'oversight': return <AdminSystemOversight analyticsData={analyticsData} evidenceHistory={evidenceHistory} events={events} />;
       case 'approvals': return <AdminApprovals events={events} evidenceHistory={evidenceHistory} onVerifyEvent={handleVerifyEvent} onVerifyEvidence={handleVerifyEvidence} onRequestChange={(id) => setFeedbackModal({isOpen: true, eventId: id})} />;
       case 'profile': return <ProfilePage />;
       default: return <div className="p-10 text-center text-gray-500">Page under construction</div>;
