@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Home, Calendar, FileText, Bell, User, 
   Search, Menu, Filter, Download, 
@@ -9,7 +9,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell 
 } from 'recharts';
 
-// --- INITIAL DATA & CONSTANTS ---
+// --- DỮ LIỆU KHỞI TẠO ---
 
 const EVENT_CATEGORIES = [
   { id: 'academic', label: 'Academic & Research', color: 'bg-blue-50 text-blue-700', maxPoints: 20 }, 
@@ -19,17 +19,14 @@ const EVENT_CATEGORIES = [
   { id: 'leadership', label: 'Leadership & Skills', color: 'bg-orange-50 text-orange-700', maxPoints: 10 } 
 ];
 
-// Initial events - UPDATED WITH REAL EXAMPLES FROM IMAGES & USER REQUEST
 const INITIAL_EVENTS = [
-  { id: 1, title: 'Scientific Research Workshop', date: '2024-10-26', time: '08:00 AM', location: 'Hall A', points: 2, category: 'Academic & Research', status: 'Open', image: '🔬', description: 'Learn research methodology and paper writing.', proposalFile: 'workshop_plan.pdf', registered: false },
-  { id: 2, title: 'FTU Games 2025 Opening', date: '2024-10-28', time: '02:00 PM', location: 'Sports Center', points: 2, category: 'Culture, Arts & Sports', status: 'Full', image: '🏅', description: 'The biggest sports festival of the year. Cheering teams welcome!', proposalFile: 'games_budget.pdf', registered: false },
-  { id: 3, title: 'Blood Donation Drive', date: '2024-11-02', time: '07:00 AM', location: 'Main Hall', points: 5, category: 'Volunteer & Community', status: 'Open', image: '🩸', description: 'Give blood, save lives. Organized by the Red Cross unit.', proposalFile: 'redcross_collab.pdf', registered: false },
-  
-  // NEW EVENTS ADDED BASED ON YOUR REQUEST
-  { id: 4, title: 'VSIC 2025: Social Innovation Challenge', date: '2025-12-01', time: '05:00 PM', location: 'Hall B001', points: 5, category: 'Academic & Research', status: 'Open', image: '💡', description: 'Vietnam Social Innovation Challenge 2025. Join the finals to witness creative business models.', proposalFile: 'vsic_plan.pdf', registered: false },
-  { id: 5, title: 'FBT 2025: Badminton Tournament', date: '2025-11-15', time: '08:00 AM', location: 'Sports Hall', points: 2, category: 'Culture, Arts & Sports', status: 'Open', image: '🏸', description: 'Badminton Championship CSII. Networking with alumni and lecturers.', proposalFile: 'badminton_plan.pdf', registered: false },
-  { id: 6, title: 'Ambassador 2026 Recruitment', date: '2025-12-05', time: '11:59 PM', location: 'Online', points: 5, category: 'Leadership & Skills', status: 'Open', image: '🌟', description: 'Become the face of FTU admissions 2026. Communication & Leadership role.', proposalFile: 'ambassador_program.pdf', registered: false },
-  { id: 7, title: '1:1 Career Consulting (PEC)', date: '2025-12-03', time: '09:00 AM', location: 'F-Hub, Hanoi', points: 2, category: 'Academic & Research', status: 'Open', image: '💼', description: 'Personalized career guidance with experts. Understand labor market trends.', proposalFile: 'career_consult.pdf', registered: false },
+  { id: 1, title: 'Scientific Research Workshop', date: '2024-10-26', time: '08:00 AM', location: 'Hall A', points: 2, category: 'Academic & Research', status: 'Open', image: '🔬', description: 'Learn research methodology.', proposalFile: 'workshop_plan.pdf', registered: false },
+  { id: 2, title: 'FTU Games 2025 Opening', date: '2024-10-28', time: '02:00 PM', location: 'Sports Center', points: 2, category: 'Culture, Arts & Sports', status: 'Full', image: '🏅', description: 'Sports festival opening ceremony.', proposalFile: 'games_budget.pdf', registered: false },
+  { id: 3, title: 'Blood Donation Drive', date: '2024-11-02', time: '07:00 AM', location: 'Main Hall', points: 5, category: 'Volunteer & Community', status: 'Open', image: '🩸', description: 'Give blood, save lives.', proposalFile: 'redcross_collab.pdf', registered: false },
+  { id: 4, title: 'Badminton Tournament FBT 2025', date: '2025-11-15', time: '08:00 AM', location: 'Sports Hall', points: 2, category: 'Culture, Arts & Sports', status: 'Open', image: '🏸', description: 'Annual badminton championship.', proposalFile: 'badminton_plan.pdf', registered: false },
+  { id: 5, title: 'Talkshow: Maritime Law', date: '2024-11-20', time: '09:00 AM', location: 'Room B201', points: 2, category: 'Academic & Research', status: 'Open', image: '🚢', description: 'Understanding contracts of carriage.', proposalFile: 'law_talkshow.pdf', registered: false },
+  { id: 6, title: 'Ambassador 2026 Application', date: '2025-01-10', time: '11:59 PM', location: 'Online', points: 5, category: 'Leadership & Skills', status: 'Open', image: '🌟', description: 'Become the face of FTU admissions.', proposalFile: 'ambassador_program.pdf', registered: false },
+  { id: 7, title: '1:1 Career Consulting (PEC)', date: '2025-12-03', time: '09:00 AM', location: 'F-Hub, Hanoi', points: 2, category: 'Academic & Research', status: 'Open', image: '💼', description: 'Personalized career guidance.', proposalFile: 'career_consult.pdf', registered: false },
 ];
 
 const INITIAL_SCORES = {
@@ -46,13 +43,19 @@ const MOCK_NOTIFICATIONS = [
 
 const INIT_EVIDENCE_HISTORY = [];
 
-// Initial Analytics Data (Zeroed out as requested)
+// Mocked - In real app this would update dynamically too
+const MOCK_STUDENT_ATTENDANCE = [
+  { id: 1, name: 'Nguyen Van A', studentId: '2025001', class: 'K60-A', time: '08:15 AM', method: 'Code Entry' },
+  { id: 2, name: 'Tran Thi B', studentId: '2025002', class: 'K60-B', time: '08:20 AM', method: 'QR Scan' },
+];
+
+const MOCK_CLUB_MEMBERS = [
+  { id: 1, name: 'Tran Van E', studentId: '2025005', role: 'President', status: 'Active', joined: 'Sep 2023' },
+  { id: 2, name: 'Le Thi F', studentId: '2025006', role: 'Treasurer', status: 'Active', joined: 'Sep 2023' },
+];
+
 const INITIAL_ANALYTICS_DATA = [
-  { name: 'Jan', participation: 0 }, 
-  { name: 'Feb', participation: 0 }, 
-  { name: 'Mar', participation: 0 }, 
-  { name: 'Apr', participation: 0 }, 
-  { name: 'May', participation: 0 },
+  { name: 'Jan', participation: 0 }, { name: 'Feb', participation: 0 }, { name: 'Mar', participation: 0 }, { name: 'Apr', participation: 0 }, { name: 'May', participation: 0 },
 ];
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
@@ -89,7 +92,6 @@ const Badge = ({ status }) => {
     'Pending Review': 'bg-yellow-100 text-yellow-800',
     'Draft': 'bg-gray-100 text-gray-800',
     'Registered': 'bg-blue-100 text-blue-800',
-    'On Track': 'bg-green-100 text-green-800',
     'Verified': 'bg-green-100 text-green-800',
     'Pending': 'bg-orange-100 text-orange-800',
     'Active': 'bg-green-100 text-green-800',
@@ -161,7 +163,6 @@ const NativeBarChart = ({ data }) => (
     {data.slice(0, 5).map((item, i) => (
       <div key={i} className="flex-1 flex flex-col items-center gap-2 group cursor-pointer">
         <div className="w-full bg-gray-100 rounded-t-md relative h-48 flex items-end overflow-hidden">
-          {/* Height relative to 100 (max participation) */}
           <div className="w-full bg-[#B40000] rounded-t-md transition-all duration-500 group-hover:bg-red-700" style={{ height: `${Math.min(item.participation, 100)}%` }}></div>
         </div>
         <span className="text-xs text-gray-500 font-medium">{item.name}</span>
@@ -210,22 +211,31 @@ const LoginPage = ({ onLogin }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (studentId.trim()) onLogin(role);
+    if (studentId.trim()) {
+       // Pass ID to login to simulate persistent user session
+       onLogin(role, studentId);
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#F8F8F8] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
         <div className="bg-[#B40000] p-8 text-center text-white">
+          <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden border-4 border-white/20">
+             {/* LOGO ADDED HERE */}
+             <img src="/FTU_logo_2020.svg.jpg" alt="Logo" className="w-full h-full object-cover" onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/80x80/B40000/FFFFFF?text=F"; }} />
+          </div>
           <h1 className="text-2xl font-bold" style={{ fontFamily: "'Montserrat', sans-serif" }}>FTU-Engage</h1>
           <p className="opacity-90 text-sm mt-1">Student Activity Management System</p>
         </div>
         <div className="p-8 space-y-6">
+          
           <div className="flex gap-2 mb-4 justify-center bg-gray-50 p-2 rounded-lg border border-gray-100">
             <button onClick={() => fillTestCreds('student')} className="text-xs px-3 py-1 bg-white border border-gray-200 hover:border-[#B40000] hover:text-[#B40000] rounded shadow-sm">Test: Student</button>
             <button onClick={() => fillTestCreds('organizer')} className="text-xs px-3 py-1 bg-white border border-gray-200 hover:border-[#B40000] hover:text-[#B40000] rounded shadow-sm">Test: Organizer</button>
             <button onClick={() => fillTestCreds('admin')} className="text-xs px-3 py-1 bg-white border border-gray-200 hover:border-[#B40000] hover:text-[#B40000] rounded shadow-sm">Test: Admin</button>
           </div>
+
           <div className="flex bg-gray-100 p-1 rounded-lg mb-4">
             {['student', 'organizer', 'admin'].map((r) => (
               <button key={r} onClick={() => setRole(r)} className={`flex-1 py-2 text-xs font-bold uppercase rounded-md transition-all ${role === r ? 'bg-white shadow-sm text-[#B40000]' : 'text-gray-500 hover:text-gray-700'}`}>{r.toUpperCase()}</button>
@@ -234,11 +244,11 @@ const LoginPage = ({ onLogin }) => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">ID (Number Only)</label>
-              <input type="number" required value={studentId} onChange={(e) => setStudentId(e.target.value)} className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#B40000]" placeholder="e.g. 2025001" />
+              <input type="number" required value={studentId} onChange={(e) => setStudentId(e.target.value)} className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#B40000]" placeholder="Enter your ID" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#B40000]" placeholder="••••••••" />
+              <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#B40000]" placeholder="Any password" />
             </div>
             <Button type="submit" className="w-full py-3 text-lg mt-4">Login <ArrowRight size={18} /></Button>
           </form>
@@ -405,22 +415,72 @@ const CheckInPage = () => {
   return (<div className="max-w-xl mx-auto pt-10"><Card className="text-center space-y-6 p-10"><div className="mb-4"><h2 className="text-2xl font-bold text-gray-800">Event Check-in</h2></div>{status === 'success' ? <div className="text-green-600 font-bold">Checked In!</div> : <div className="space-y-4"><input type="text" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Enter Code" className="w-full text-center text-2xl p-4 border rounded-xl" /><Button onClick={() => setStatus('success')} className="w-full">Submit</Button></div>}</Card></div>);
 };
 
-const ProfilePage = () => {
+// --- UPDATED PROFILE PAGE (FIXED INPUT FOCUS) ---
+
+// 1. Extract InfoRow outside to prevent re-definition
+const InfoRow = ({ label, name, value, isEditing, onChange }) => (
+  <div className="grid grid-cols-3 items-center">
+    <span className="font-medium text-gray-500">{label}:</span>
+    <div className="col-span-2 font-bold text-gray-800">
+      {isEditing ? (
+        <input 
+          type="text" 
+          name={name} 
+          value={value || ''} 
+          onChange={onChange} 
+          className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:border-[#B40000] focus:outline-none"
+        />
+      ) : (
+        <span>{value || '-'}</span>
+      )}
+    </div>
+  </div>
+);
+
+const ProfilePage = ({ userProfile, onSaveProfile }) => {
   const [isEditing, setIsEditing] = useState(true); 
-  const [formData, setFormData] = useState({ name: '', id: '', dob: '', phone: '', email: '', address: '', class: '', major: '' });
-  const handleInputChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-  const InfoRow = ({ label, name, value }) => (<div className="grid grid-cols-3 items-center"><span className="font-medium text-gray-500">{label}:</span><div className="col-span-2 font-bold text-gray-800">{isEditing ? <input type="text" name={name} value={value} onChange={handleInputChange} className="w-full border rounded-lg p-2 text-sm" /> : value || '-'}</div></div>);
+  const [formData, setFormData] = useState(userProfile || { name: '', id: '', dob: '', phone: '', email: '', address: '', class: '', major: '' });
+
+  useEffect(() => {
+    if (userProfile) {
+      setFormData(userProfile);
+      setIsEditing(false);
+    } else {
+      setFormData({ name: '', id: '', dob: '', phone: '', email: '', address: '', class: '', major: '' });
+      setIsEditing(true);
+    }
+  }, [userProfile]);
+
+  const handleInputChange = (e) => {
+     const { name, value } = e.target;
+     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSave = () => {
+      onSaveProfile(formData);
+      setIsEditing(false);
+      alert("Profile Saved Successfully!");
+  }
 
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100 flex justify-between items-center">
-        <div className="flex items-center gap-3"><div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-2xl">👤</div><div><h1 className="text-xl font-bold">{formData.name || 'Your Name'}</h1><p className="text-sm text-gray-500">Student Profile</p></div></div>
-        <Button onClick={() => setIsEditing(!isEditing)} variant={isEditing ? 'success' : 'outline'}>{isEditing ? 'Save Profile' : 'Edit Profile'}</Button>
+        <div className="flex items-center gap-3"><div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-2xl">👤</div><div><h1 className="text-xl font-bold">{formData.name || 'New Student'}</h1><p className="text-sm text-gray-500">Student Profile</p></div></div>
+        <Button onClick={() => isEditing ? handleSave() : setIsEditing(true)} variant={isEditing ? 'success' : 'outline'}>{isEditing ? 'Save Profile' : 'Edit Profile'}</Button>
       </div>
       <Card>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-           <div className="space-y-4"><InfoRow label="Full Name" name="name" value={formData.name} /><InfoRow label="Student ID" name="id" value={formData.id} /><InfoRow label="Date of Birth" name="dob" value={formData.dob} /></div>
-           <div className="space-y-4"><InfoRow label="Class" name="class" value={formData.class} /><InfoRow label="Major" name="major" value={formData.major} /><InfoRow label="Email" name="email" value={formData.email} /></div>
+           <div className="space-y-4">
+             {/* Pass props explicitly */}
+             <InfoRow label="Full Name" name="name" value={formData.name} isEditing={isEditing} onChange={handleInputChange} />
+             <InfoRow label="Student ID" name="id" value={formData.id} isEditing={isEditing} onChange={handleInputChange} />
+             <InfoRow label="Date of Birth" name="dob" value={formData.dob} isEditing={isEditing} onChange={handleInputChange} />
+           </div>
+           <div className="space-y-4">
+             <InfoRow label="Class" name="class" value={formData.class} isEditing={isEditing} onChange={handleInputChange} />
+             <InfoRow label="Major" name="major" value={formData.major} isEditing={isEditing} onChange={handleInputChange} />
+             <InfoRow label="Email" name="email" value={formData.email} isEditing={isEditing} onChange={handleInputChange} />
+           </div>
         </div>
       </Card>
     </div>
@@ -441,7 +501,6 @@ const OrganizerPortal = ({ onAddEvent, events }) => {
     alert("Event submitted for Admin verification!");
   };
 
-  // Only show events created by "me" (mocked as all events for now)
   const myEvents = events; 
 
   return (
@@ -483,6 +542,8 @@ const OrganizerPortal = ({ onAddEvent, events }) => {
     </div>
   );
 };
+
+const MemberManagement = () => (<div className="space-y-6"><Card><div className="flex justify-between items-center mb-6"><div><h2 className="font-bold text-lg text-[#B40000]">Club Member Registry</h2></div><Button variant="secondary" className="text-xs">Import List</Button></div><div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-gray-50 text-gray-600 font-medium"><tr><th className="p-3">Student Info</th><th className="p-3">Role</th><th className="p-3">Status</th></tr></thead><tbody>{MOCK_CLUB_MEMBERS.map((member) => (<tr key={member.id}><td className="p-3"><div className="font-bold">{member.name}</div></td><td className="p-3">{member.role}</td><td className="p-3"><Badge status={member.status} /></td></tr>))}</tbody></table></div></Card></div>);
 
 // --- ADMIN PORTAL ---
 const AdminApprovals = ({ events, evidenceHistory, onVerifyEvent, onVerifyEvidence, onRequestChange }) => (
@@ -619,6 +680,7 @@ const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
   const [role, setRole] = useState('student');
+  const [currentUserId, setCurrentUserId] = useState(null); // Store current logged in user ID
   const [events, setEvents] = useState(INITIAL_EVENTS);
   const [evidenceHistory, setEvidenceHistory] = useState(INIT_EVIDENCE_HISTORY);
   const [studentScores, setStudentScores] = useState(INITIAL_SCORES);
@@ -626,11 +688,24 @@ const App = () => {
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, eventId: null });
   const [feedbackModal, setFeedbackModal] = useState({ isOpen: false, eventId: null });
 
+  // PERSISTENT PROFILE STORAGE (Simulated DB)
+  const [userProfiles, setUserProfiles] = useState({}); 
+
   // HANDLERS
-  const handleLogin = (selectedRole) => {
+  const handleLogin = (selectedRole, userId) => {
     setRole(selectedRole);
+    setCurrentUserId(userId); // Save ID
     setIsAuthenticated(true);
     setActiveTab(selectedRole === 'student' ? 'home' : selectedRole === 'organizer' ? 'org-events' : 'oversight');
+  };
+
+  const handleSaveProfile = (profileData) => {
+      if (currentUserId) {
+          setUserProfiles(prev => ({
+              ...prev,
+              [currentUserId]: profileData // Save profile linked to specific ID
+          }));
+      }
   };
 
   const handleAddEvent = (newEvent) => {
@@ -654,16 +729,11 @@ const App = () => {
 
   const handleVerifyEvidence = (id, category) => {
     setEvidenceHistory(evidenceHistory.map(e => e.id === id ? { ...e, status: 'Verified' } : e));
-    
-    // LIVE SCORE UPDATE
     if (category && studentScores[category] !== undefined) {
         setStudentScores(prev => ({ ...prev, [category]: prev[category] + 5 }));
     }
-
-    // LIVE ANALYTICS UPDATE
-    const currentMonth = "Oct"; // Simulated month
+    const currentMonth = "Oct"; 
     setAnalyticsData(prev => prev.map(m => m.name === currentMonth ? { ...m, participation: m.participation + 1 } : m));
-    
     alert("Evidence Verified! 5 points added to student score.");
   };
 
@@ -677,7 +747,6 @@ const App = () => {
   const confirmRegister = () => {
     setEvents(events.map(e => e.id === confirmModal.eventId ? { ...e, registered: true } : e));
     setConfirmModal({ isOpen: false, eventId: null });
-    // Auto add points for internal events (simulated)
     const event = events.find(e => e.id === confirmModal.eventId);
     if(event) {
        setStudentScores(prev => ({ ...prev, [event.category]: prev[event.category] + event.points }));
@@ -696,7 +765,7 @@ const App = () => {
       case 'org-events': return <OrganizerPortal onAddEvent={handleAddEvent} events={events} />;
       case 'oversight': return <AdminSystemOversight analyticsData={analyticsData} evidenceHistory={evidenceHistory} events={events} />;
       case 'approvals': return <AdminApprovals events={events} evidenceHistory={evidenceHistory} onVerifyEvent={handleVerifyEvent} onVerifyEvidence={handleVerifyEvidence} onRequestChange={(id) => setFeedbackModal({isOpen: true, eventId: id})} />;
-      case 'profile': return <ProfilePage />;
+      case 'profile': return <ProfilePage userProfile={userProfiles[currentUserId]} onSaveProfile={handleSaveProfile} />;
       default: return <div className="p-10 text-center text-gray-500">Page under construction</div>;
     }
   };
